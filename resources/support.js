@@ -22,7 +22,7 @@
       stylesheet.rel = 'stylesheet'; stylesheet.href = new URL('support.css', assets).href;
       shadow.append(stylesheet);
       const content = document.createElement('div');
-      content.style.display = 'contents';
+      content.className = 'support-container';
       content.innerHTML = `<button class="open" type="button"></button><dialog><header><strong></strong><button class="close" type="button">×</button></header><div class="status" role="status"></div></dialog>`;
       shadow.append(content);
       this.button = shadow.querySelector('.open');
@@ -70,6 +70,7 @@
       this.button.querySelector('.launcher-label').textContent = text[0]; this.button.setAttribute('aria-label', text[0]);
       this.shadowRoot.querySelector('strong').textContent = text[0];
       this.closeButton.setAttribute('aria-label', text[1]);
+      if (this.frame) this.frame.title = text[0];
       if (this.frame && this.locale !== language) {
         this.locale = language;
         const url = new URL(this.frame.src); url.searchParams.set('locale', language); url.searchParams.set('theme', this.theme);

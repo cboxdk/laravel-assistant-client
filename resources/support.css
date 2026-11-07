@@ -1,3 +1,4 @@
+.support-container{display:contents}
 :host{font:14px/1.5 system-ui,sans-serif;color:var(--foreground,#202124)}
         button{font:inherit;color:inherit;cursor:pointer;border:1px solid var(--border,#8885);background:var(--card,transparent);border-radius:8px;padding:7px 11px}
         button:focus-visible{outline:2px solid #3b82f6;outline-offset:3px}
