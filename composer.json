@@ -1,0 +1,66 @@
+{
+    "name": "cboxdk/laravel-assistant-client",
+    "description": "Cbox Assistant client for Laravel: signed tools, product support and curated knowledge.",
+    "type": "library",
+    "license": "MIT",
+    "require": {
+        "php": "^8.4",
+        "ext-sodium": "*",
+        "firebase/php-jwt": "^7.2",
+        "illuminate/console": "^12.0 || ^13.0",
+        "illuminate/http": "^12.0 || ^13.0",
+        "illuminate/routing": "^12.0 || ^13.0",
+        "illuminate/support": "^12.0 || ^13.0",
+        "illuminate/view": "^12.0 || ^13.0",
+        "illuminate/database": "^12.0 || ^13.0",
+        "illuminate/cache": "^12.0 || ^13.0"
+    },
+    "require-dev": {
+        "larastan/larastan": "^3.14",
+        "laravel/pint": "^1.32",
+        "orchestra/testbench": "^10.0 || ^11.0",
+        "pestphp/pest": "^3.5 || ^4.0 || ^5.0"
+    },
+    "autoload": {
+        "psr-4": {
+            "Cbox\\AiAssistant\\Connector\\": "src/"
+        }
+    },
+    "autoload-dev": {
+        "psr-4": {
+            "Cbox\\AiAssistant\\Connector\\Tests\\": "tests/"
+        }
+    },
+    "extra": {
+        "laravel": {
+            "providers": [
+                "Cbox\\AiAssistant\\Connector\\AiAssistantConnectorServiceProvider"
+            ],
+            "aliases": {
+                "AiAssistant": "Cbox\\AiAssistant\\Connector\\Facades\\AiAssistant"
+            }
+        }
+    },
+    "config": {
+        "sort-packages": true,
+        "allow-plugins": {
+            "pestphp/pest-plugin": true
+        }
+    },
+    "minimum-stability": "stable",
+    "prefer-stable": true,
+    "scripts": {
+        "lint": "pint --test",
+        "analyse": "phpstan analyse --no-progress --memory-limit=1G",
+        "test": "pest",
+        "license-check": "@php bin/check-licenses.php",
+        "sbom": "@php bin/generate-sbom.php",
+        "qa": [
+            "@lint",
+            "@analyse",
+            "@test",
+            "@license-check",
+            "@composer audit --no-dev"
+        ]
+    }
+}
