@@ -43,6 +43,9 @@
         }
       };
       window.addEventListener('message', this.onMessage);
+      this.colorScheme = window.matchMedia('(prefers-color-scheme: dark)');
+      this.onColorSchemeChange = () => this.presentation();
+      this.colorScheme.addEventListener('change', this.onColorSchemeChange);
       this.observer = new MutationObserver(() => this.presentation());
       this.observer.observe(document.documentElement, { attributes: true, attributeFilter: ['lang', 'data-theme', 'class'] });
       this.presentation();
@@ -51,6 +54,7 @@
     disconnectedCallback() {
       this.observer?.disconnect(); clearInterval(this.timer);
       window.removeEventListener('message', this.onMessage);
+      this.colorScheme?.removeEventListener('change', this.onColorSchemeChange);
       this.abort?.abort();
     }
     attributeChangedCallback(name, oldValue, newValue) {
@@ -63,7 +67,7 @@
       const root = document.documentElement;
       const preference = root.dataset.theme;
       this.theme = preference === 'dark' || preference === 'light' ? preference
-        : root.classList.contains('dark') ? 'dark' : 'light';
+        : root.classList.contains('dark') || this.colorScheme.matches ? 'dark' : 'light';
       this.dataset.theme = this.theme;
       const language = this.language();
       const text = labels[language] || labels.en;
