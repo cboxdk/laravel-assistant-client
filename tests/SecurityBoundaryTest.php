@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace Cbox\AiAssistant\Connector\Tests;
 
 use Cbox\AiAssistant\Connector\Facades\AiAssistant;
+use Cbox\AiAssistant\Connector\ToolBuilder;
 use Firebase\JWT\JWT;
 
 class SecurityBoundaryTest extends TestCase
@@ -32,5 +33,12 @@ class SecurityBoundaryTest extends TestCase
         $this->getJson('/ai-assistant/manifest', ['Authorization' => 'Bearer '.$this->sign(['jti' => null])])->assertOk();
         config()->set('ai-assistant-connector.handshake_secret', null);
         $this->getJson('/ai-assistant/manifest', ['Authorization' => 'Bearer '.$this->sign([])])->assertUnauthorized();
+    }
+
+    public function test_tools_require_an_explicit_read_only_declaration(): void
+    {
+        $tool = new ToolBuilder('account_status');
+        self::assertFalse($tool->toManifest()['read_only']);
+        self::assertTrue($tool->readOnly()->toManifest()['read_only']);
     }
 }

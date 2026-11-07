@@ -17,3 +17,5 @@ The support session issuer signs a three-minute, widget-bound HS256 assertion. K
 Inbox action arguments arrive from the authorized staff interface; they still require input validation and a permission check. The signature does not make arbitrary arguments safe. Host business logic must validate tool arguments against its domain rules; exported JSON Schema is descriptive and does not substitute for those checks.
 
 Public guides expose only the explicit manifest. Removing a file from that manifest does not remove previously indexed content from Assistant; withdrawal requires an explicit platform removal.
+
+Only declare `->readOnly()` for handlers that do not change business state. Assistant may run these reads without a confirmation prompt; the service guard still runs. Omitted declarations remain subject to confirmation.

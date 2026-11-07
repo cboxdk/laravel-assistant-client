@@ -26,6 +26,8 @@ class ToolBuilder
 
     private string $description = '';
 
+    private bool $readOnly = false;
+
     /** @var array<string, mixed> the JSON Schema for arguments */
     private array $schema = ['type' => 'object', 'properties' => [], 'required' => []];
 
@@ -77,6 +79,14 @@ class ToolBuilder
     public function mcpServer(array $server): self
     {
         $this->mcp = $server;
+
+        return $this;
+    }
+
+    /** Declare a non-mutating tool. The service guard still runs for every call. */
+    public function readOnly(): self
+    {
+        $this->readOnly = true;
 
         return $this;
     }
@@ -167,6 +177,7 @@ class ToolBuilder
             'description' => $this->description,
             'parameters' => $this->schema,
             'kind' => $this->kind,
+            'read_only' => $this->readOnly,
         ];
 
         // Only the kinds the platform calls directly advertise a target; a bridge tool has

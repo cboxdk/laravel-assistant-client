@@ -27,6 +27,7 @@ use Cbox\AiAssistant\Connector\Facades\AiAssistant;
 use Cbox\AiAssistant\Connector\Support\ToolContext;
 
 AiAssistant::tool('workspace_status')
+    ->readOnly()
     ->description('Read the current workspace status')
     ->parameters([])
     ->guard(fn (ToolContext $ctx): bool => $ctx->verified
