@@ -1,5 +1,14 @@
 # Changelog
 
+## Unreleased (0.2.0)
+
+- Customer profile: `AiAssistant::resource()` declares what a customer has in the service (sites, domains, invoices…) with deny-by-default guards, normalised `ResourceItem`s and a 50-item cap; `pickable()` resources can be offered on support request forms.
+- Account signals: `AiAssistant::signals()` with a typed vocabulary (`Signals`, `Lifecycle`, `SignalFlag`, `Mrr`, `UsageMeter`, `RecentChange`); invalid values and unknown keys are dropped and several closures are merged.
+- New signed endpoint `GET /ai-assistant/profile`. One failing resource is reported and served as unavailable; the others still return.
+- The manifest adds `resources` and `signals`. Existing keys are unchanged.
+- Support access elevation: `ToolContext::supportAccess()` exposes a valid, reasoned, time-limited staff elevation from the signed principal, and `SupportAccessUsed` is dispatched when an elevated request reaches the profile, a tool or an inbox component. The SDK never widens access by itself.
+- Testing: `getAssistantProfile()` and `assistantSupportAccess()` in `InteractsWithAssistant`.
+
 ## 0.1.1 — 2026-11-07
 
 - Follow the operating system's color scheme when the host has no explicit theme preference.

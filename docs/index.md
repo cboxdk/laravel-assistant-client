@@ -16,6 +16,7 @@ Connect a Laravel product to Cbox Assistant. The product owns identity, permissi
 - [Product support](cookbook/product-support.md)
 - [Knowledge publishing](cookbook/knowledge.md)
 - [Backend-driven conversations](cookbook/backend-driven.md)
+- [Customer profile](cookbook/customer-profile.md)
 - [Configuration](configuration/reference.md)
 - [Extension points](extension-points/customization.md)
 - [Security](security/threat-model.md)
