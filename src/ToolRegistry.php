@@ -4,6 +4,9 @@ declare(strict_types=1);
 
 namespace Cbox\AiAssistant\Connector;
 
+use Cbox\AiAssistant\Connector\Profile\Signals;
+use Cbox\AiAssistant\Connector\Support\ToolContext;
+use Closure;
 use Illuminate\Support\Facades\Config;
 
 /**
@@ -24,6 +27,12 @@ class ToolRegistry
     /** @var array<string, InboxComponentBuilder> opt-in support-inbox surface exports */
     private array $inboxComponents = [];
 
+    /** @var array<string, ResourceBuilder> customer profile resources */
+    private array $resources = [];
+
+    /** @var list<Closure> customer profile signals closures; their results are validated when collected */
+    private array $signals = [];
+
     public function register(ToolBuilder $tool): void
     {
         $this->tools[$tool->name] = $tool;
@@ -36,6 +45,39 @@ class ToolRegistry
     public function registerInboxComponent(InboxComponentBuilder $component): void
     {
         $this->inboxComponents[$component->key] = $component;
+    }
+
+    /** Register a customer profile resource, served through the signed profile endpoint. */
+    public function registerResource(ResourceBuilder $resource): void
+    {
+        $this->resources[$resource->key] = $resource;
+    }
+
+    public function resource(string $key): ?ResourceBuilder
+    {
+        return $this->resources[$key] ?? null;
+    }
+
+    /** @return array<string, ResourceBuilder> */
+    public function resources(): array
+    {
+        return $this->resources;
+    }
+
+    /**
+     * Register a closure contributing account signals; several closures are merged.
+     *
+     * @param  Closure(ToolContext): (array<string, mixed>|Signals)  $signals
+     */
+    public function registerSignals(Closure $signals): void
+    {
+        $this->signals[] = $signals;
+    }
+
+    /** @return list<Closure> */
+    public function signalProviders(): array
+    {
+        return $this->signals;
     }
 
     public function inboxComponent(string $key): ?InboxComponentBuilder
@@ -88,9 +130,10 @@ class ToolRegistry
     /**
      * The full discovery document the platform pulls: a version, the tools (each with its
      * `kind`), and the opt-in procedures/groups exports. `tools` keeps its historical shape
-     * so an older importer still reads it.
+     * so an older importer still reads it. `resources` and `signals` describe the customer
+     * profile; they are additive, so an importer that predates them ignores them.
      *
-     * @return array{version: int, tools: list<array<string, mixed>>, procedures: list<array<string, mixed>>, groups: list<array<string, mixed>>, inbox_cards: list<array<string, mixed>>, inbox_actions: list<array<string, mixed>>}
+     * @return array{version: int, tools: list<array<string, mixed>>, procedures: list<array<string, mixed>>, groups: list<array<string, mixed>>, inbox_cards: list<array<string, mixed>>, inbox_actions: list<array<string, mixed>>, resources: list<array{key: string, label: string, singular: string, pickable: bool}>, signals: bool}
      */
     public function document(): array
     {
@@ -101,6 +144,8 @@ class ToolRegistry
             'groups' => $this->groups,
             'inbox_cards' => $this->inboxManifest(InboxComponentBuilder::KIND_CARD),
             'inbox_actions' => $this->inboxManifest(InboxComponentBuilder::KIND_ACTION),
+            'resources' => array_values(array_map(static fn (ResourceBuilder $r): array => $r->toManifest(), $this->resources)),
+            'signals' => $this->signals !== [],
         ];
     }
 

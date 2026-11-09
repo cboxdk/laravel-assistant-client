@@ -5,6 +5,7 @@ declare(strict_types=1);
 use Cbox\AiAssistant\Connector\Http\HookController;
 use Cbox\AiAssistant\Connector\Http\InboxComponentController;
 use Cbox\AiAssistant\Connector\Http\ManifestController;
+use Cbox\AiAssistant\Connector\Http\ProfileController;
 use Cbox\AiAssistant\Connector\Http\SupportGuideController;
 use Illuminate\Support\Facades\Route;
 
@@ -24,6 +25,7 @@ Route::get('/guides/{key}', SupportGuideController::class)
 
 Route::post('/hook', HookController::class)->name('ai-assistant-connector.hook');
 Route::get('/manifest', ManifestController::class)->name('ai-assistant-connector.manifest');
+Route::get('/profile', ProfileController::class)->name('ai-assistant-connector.profile');
 
 // The support-inbox surface: hydrate a card (GET) or fire a confirm-gated action (POST). Both are
 // platform-signed + verified exactly like the tool hook.

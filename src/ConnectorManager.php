@@ -6,6 +6,9 @@ namespace Cbox\AiAssistant\Connector;
 
 use Cbox\AiAssistant\Connector\Embedded\EmbeddedRunner;
 use Cbox\AiAssistant\Connector\Embedded\PendingRun;
+use Cbox\AiAssistant\Connector\Profile\Signals;
+use Cbox\AiAssistant\Connector\Support\ToolContext;
+use Closure;
 
 /**
  * The entry point behind the `AiAssistant` facade. `tool()` starts a fluent definition
@@ -72,6 +75,31 @@ class ConnectorManager
         $this->registry->registerInboxComponent($component);
 
         return $component;
+    }
+
+    /**
+     * Start a fluent definition of a customer profile RESOURCE: one kind of thing the customer
+     * has in this service (projects, sites, domains, invoices…). Registered immediately; denied
+     * until it has a guard returning true. Use a service-prefixed key such as `sites_domains`.
+     */
+    public function resource(string $key): ResourceBuilder
+    {
+        $resource = new ResourceBuilder($key);
+        $this->registry->registerResource($resource);
+
+        return $resource;
+    }
+
+    /**
+     * Contribute account SIGNALS to the customer profile (lifecycle, plan, MRR, flags…). The
+     * closure runs as the verified principal and must authorize itself; return an empty
+     * {@see Signals} to share nothing. Several closures are merged.
+     *
+     * @param  Closure(ToolContext): (array<string, mixed>|Signals)  $signals
+     */
+    public function signals(Closure $signals): void
+    {
+        $this->registry->registerSignals($signals);
     }
 
     public function assistant(string $key): PendingRun

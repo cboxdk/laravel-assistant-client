@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace Cbox\AiAssistant\Connector\Http;
 
+use Cbox\AiAssistant\Connector\Events\SupportAccessUsed;
 use Cbox\AiAssistant\Connector\InboxComponentBuilder;
 use Cbox\AiAssistant\Connector\Security\RequestVerifier;
 use Cbox\AiAssistant\Connector\Security\VerificationException;
@@ -62,6 +63,8 @@ class InboxComponentController
         if (! $component->passesGuard($ctx)) {
             return response()->json(['error' => 'forbidden', 'message' => 'You are not allowed to do that.'], 403);
         }
+
+        SupportAccessUsed::dispatchFor($ctx, SupportAccessUsed::SURFACE_INBOX, [$component->key]);
 
         $arguments = $request->isMethod('GET')
             ? $this->scalarArgs(Payload::object($request->query()))

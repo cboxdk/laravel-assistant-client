@@ -18,4 +18,8 @@ Inbox action arguments arrive from the authorized staff interface; they still re
 
 Public guides expose only the explicit manifest. Removing a file from that manifest does not remove previously indexed content from Assistant; withdrawal requires an explicit platform removal.
 
+The customer profile endpoint is verified like discovery and may omit `jti` because it only reads; a present `jti` is still single-use. Profile resources need an explicit guard returning true, exactly like tools. Signals closures have no separate guard and must check access themselves. Items are normalised at the boundary: non-HTTPS links are dropped, text is cut and lists are capped, but the list closure still decides which records belong to the principal.
+
+A `support_access` claim in the signed principal is exposed through `ToolContext::supportAccess()` only with a reason of at least ten characters and an expiry in the future, at most sixty minutes ahead. The SDK never widens access because of it; the service decides in its guards and closures. Every elevated request that passes a guard dispatches `SupportAccessUsed` so the service can keep its own record.
+
 Only declare `->readOnly()` for handlers that do not change business state. Assistant may run these reads without a confirmation prompt; the service guard still runs. Omitted declarations remain subject to confirmation.

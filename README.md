@@ -12,6 +12,7 @@ Register authorized tools in your app, connect the signed manifest in Assistant,
 - [Embed product support](docs/cookbook/product-support.md)
 - [Publish product documentation](docs/cookbook/knowledge.md)
 - [Run conversations from your backend](docs/cookbook/backend-driven.md)
+- [Share the customer profile](docs/cookbook/customer-profile.md): resources, account signals and support access elevation
 - [Security boundaries](docs/security/threat-model.md)
 - [Testing](docs/getting-started/testing.md)
 - [Requirements](docs/requirements.md)
