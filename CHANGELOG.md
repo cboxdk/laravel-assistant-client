@@ -1,6 +1,6 @@
 # Changelog
 
-## Unreleased (0.2.0)
+## 0.2.0 — 2026-11-09
 
 - Customer profile: `AiAssistant::resource()` declares what a customer has in the service (sites, domains, invoices…) with deny-by-default guards, normalised `ResourceItem`s and a 50-item cap; `pickable()` resources can be offered on support request forms.
 - Account signals: `AiAssistant::signals()` with a typed vocabulary (`Signals`, `Lifecycle`, `SignalFlag`, `Mrr`, `UsageMeter`, `RecentChange`); invalid values and unknown keys are dropped and several closures are merged.
