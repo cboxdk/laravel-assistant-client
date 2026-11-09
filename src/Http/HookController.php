@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace Cbox\AiAssistant\Connector\Http;
 
+use Cbox\AiAssistant\Connector\Events\SupportAccessUsed;
 use Cbox\AiAssistant\Connector\Security\RequestVerifier;
 use Cbox\AiAssistant\Connector\Security\VerificationException;
 use Cbox\AiAssistant\Connector\Support\Payload;
@@ -46,6 +47,8 @@ class HookController
         if (! $tool->passesGuard($ctx)) {
             return response()->json(['error' => 'forbidden', 'message' => 'You are not allowed to do that.'], 403);
         }
+
+        SupportAccessUsed::dispatchFor($ctx, SupportAccessUsed::SURFACE_TOOL, [$tool->name]);
 
         try {
             $result = $tool->run($this->arguments($claims), $ctx);

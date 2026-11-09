@@ -5,9 +5,10 @@ declare(strict_types=1);
 namespace Cbox\AiAssistant\Connector\Tests\Fixtures;
 
 use Cbox\AiAssistant\Connector\Testing\InteractsWithAssistant;
+use Orchestra\Testbench\TestCase;
 
-/** Composition site analysed with the package, matching its host test usage. */
-class AssistantConsumer
+/** Composition site analysed with the package, matching its host test usage (a Laravel test case). */
+abstract class AssistantConsumer extends TestCase
 {
     use InteractsWithAssistant;
 }

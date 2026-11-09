@@ -48,4 +48,16 @@ readonly class ToolContext
 
         return is_scalar($account) && (string) $account !== '' ? (string) $account : null;
     }
+
+    /**
+     * The support staff elevation this call carries, or null when there is none or it is not
+     * valid right now (empty or short reason, expired, or more than sixty minutes ahead).
+     *
+     * A non-null value is a verified claim, not a permission: the SDK never widens access by
+     * itself. Decide in your guard or list closure whether the elevation changes what is served.
+     */
+    public function supportAccess(): ?SupportAccess
+    {
+        return SupportAccess::fromClaim($this->principal['support_access'] ?? null);
+    }
 }
