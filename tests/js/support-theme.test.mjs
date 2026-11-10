@@ -11,6 +11,7 @@ function mount({ preference, darkClass = false, systemDark = false } = {}) {
     nodes = new Map();
     append() {}
     setAttribute() {}
+    getAttribute() { return null; }
     addEventListener() {}
     attachShadow() { return (this.shadowRoot = new Element()); }
     querySelector(selector) {

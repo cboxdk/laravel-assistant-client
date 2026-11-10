@@ -6,9 +6,11 @@ namespace Cbox\AiAssistant\Connector;
 
 use Cbox\AiAssistant\Connector\Embedded\EmbeddedRunner;
 use Cbox\AiAssistant\Connector\Embedded\PendingRun;
+use Cbox\AiAssistant\Connector\Help\HelpClient;
 use Cbox\AiAssistant\Connector\Profile\Signals;
 use Cbox\AiAssistant\Connector\Support\ToolContext;
 use Closure;
+use Illuminate\Container\Container;
 
 /**
  * The entry point behind the `AiAssistant` facade. `tool()` starts a fluent definition
@@ -110,5 +112,11 @@ class ConnectorManager
     public function registry(): ToolRegistry
     {
         return $this->registry;
+    }
+
+    /** Help search, page topic articles and support updates (resolved from the container, so fakeable). */
+    public function help(): HelpClient
+    {
+        return Container::getInstance()->make(HelpClient::class);
     }
 }

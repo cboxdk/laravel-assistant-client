@@ -22,7 +22,19 @@ return [
         'assistant' => env('AI_ASSISTANT_SUPPORT_ASSISTANT'),
         'product' => env('AI_ASSISTANT_SUPPORT_PRODUCT'),
         'identity_namespace' => env('AI_ASSISTANT_IDENTITY_NAMESPACE'),
+        /*
+        | The workspace's support portal, shown as "Support portal" in the shell's Help column. Leave
+        | it empty while the portal is offline; the Assistant session also reports the live value.
+        */
+        'portal_url' => env('AI_ASSISTANT_SUPPORT_PORTAL_URL'),
     ],
+
+    /*
+    | The Assistant public API (Help search, page topics, support updates). Defaults to
+    | `<platform origin>/api/v1`; set it to `https://api.cboxassistant.com/v1` once the API host is live.
+    */
+    'api_url' => env('AI_ASSISTANT_API_URL'),
+    'help_timeout' => (int) env('AI_ASSISTANT_HELP_TIMEOUT', 5),
 
     /*
     | The platform's JWKS URL. Every hook/discovery request is signed by the platform and

@@ -10,3 +10,4 @@ description: Embed support, publish product knowledge and share the customer pro
 - [Customer Profile](customer-profile.md)
 - [Knowledge](knowledge.md)
 - [Product Support](product-support.md)
+- [Shell Help column](shell-help.md)

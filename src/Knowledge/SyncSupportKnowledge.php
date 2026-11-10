@@ -36,7 +36,9 @@ class SyncSupportKnowledge extends Command
 
             return self::FAILURE;
         }
+        $index = 0;
         foreach ($documents as $key => $document) {
+            $index++;
             if (! is_string($key) || ! is_array($document) || ! is_string($document['file'] ?? null)
                 || ! is_string($document['title'] ?? null) || ! is_string($document['path'] ?? null)
                 || ! is_int($document['revision'] ?? null) || ! is_string($document['locale'] ?? 'en')) {
@@ -48,10 +50,37 @@ class SyncSupportKnowledge extends Command
                 throw new \LogicException('Support documents must be inside resources/assistant.');
             }
             $client->put($assistant, $product, $key, $document['title'], (string) file_get_contents($file),
-                rtrim(Config::string('app.url'), '/').'/'.ltrim($document['path'], '/'), $document['revision'], $document['locale'] ?? 'en');
+                rtrim(Config::string('app.url'), '/').'/'.ltrim($document['path'], '/'), $document['revision'], $document['locale'] ?? 'en',
+                self::topics($document['topics'] ?? [], $index));
             $this->components->info($key.' indexed at revision '.$document['revision'].'.');
         }
 
         return self::SUCCESS;
+    }
+
+    /**
+     * A document's page help topics. A list (`['invoices.index']`) ranks the document by its place in
+     * the manifest; a map (`['invoices.index' => 1]`) sets the position per topic.
+     *
+     * @return array<string, int>
+     */
+    public static function topics(mixed $topics, int $manifestPosition): array
+    {
+        if (! is_array($topics)) {
+            throw new \LogicException('Support document topics must be a list or a map of topic => position.');
+        }
+        $result = [];
+        foreach ($topics as $key => $value) {
+            [$topic, $position] = is_int($key) ? [$value, $manifestPosition] : [$key, $value];
+            if (! is_string($topic) || preg_match('/^[a-z0-9][a-z0-9._:-]{0,119}$/D', $topic) !== 1 || ! is_int($position) || $position < 1 || $position > 1000) {
+                throw new \LogicException('Invalid support document topic.');
+            }
+            $result[$topic] = $position;
+        }
+        if (count($result) > 20) {
+            throw new \LogicException('A support document can answer at most 20 topics.');
+        }
+
+        return $result;
     }
 }
