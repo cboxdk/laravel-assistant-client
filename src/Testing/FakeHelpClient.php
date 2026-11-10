@@ -21,7 +21,7 @@ use PHPUnit\Framework\Assert;
  * test its Help wiring without a network:
  *
  *     $help = AiAssistant::fakeHelp();
- *     $help->addArticle(new HelpArticle(id: 'kart_1', title: 'Refunds'), topics: ['invoices.index']);
+ *     $help->addArticle(new HelpArticle(id: 'kart_1', title: 'Refunds', bodyHtml: '<p>…</p>'), topics: ['invoices.index']);
  *     $help->addUpdate($user, new SupportUpdate(id: 'supd_1', title: 'Refund'));
  */
 class FakeHelpClient implements HelpClient
@@ -73,6 +73,18 @@ class FakeHelpClient implements HelpClient
             fn (array $a): HelpArticle => $a['article'],
             array_filter($this->articles, fn (array $a): bool => in_array($topic, $a['topics'], true)),
         )), 0, 3);
+    }
+
+    public function article(SupportUser $user, string $id): HelpArticle
+    {
+        $this->calls[] = ['method' => 'article', 'user' => $user, 'arguments' => ['id' => $id]];
+        foreach ($this->articles as $seeded) {
+            if ($seeded['article']->id === $id) {
+                return $seeded['article'];
+            }
+        }
+
+        throw new HelpException('Help article not found.', 404);
     }
 
     public function supportUpdates(SupportUser $user, ?DateTimeInterface $since = null, ?string $cursor = null, int $limit = 25, bool $unreadOnly = false): SupportUpdatePage

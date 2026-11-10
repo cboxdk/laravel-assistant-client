@@ -12,6 +12,7 @@ use DateTimeZone;
 use Illuminate\Http\Client\ConnectionException;
 use Illuminate\Http\Client\Response;
 use Illuminate\Support\Facades\Http;
+use LogicException;
 use UnexpectedValueException;
 
 /** {@see HelpClient} over HTTP, authenticated per call with a fresh signed identity for the person. */
@@ -25,15 +26,20 @@ class HttpHelpClient implements HelpClient
     public function helpSearch(SupportUser $user, string $query, ?string $topic = null, int $limit = 5): HelpSearchResult
     {
         return HelpSearchResult::fromArray($this->get($user, '/help/search', array_filter([
-            'q' => $query, 'service' => $user->service, 'topic' => $topic, 'limit' => $limit,
+            'q' => $query, 'service' => $this->service($user), 'topic' => $topic, 'limit' => $limit,
         ], fn (mixed $v): bool => $v !== null)));
     }
 
     public function topicArticles(SupportUser $user, string $topic): array
     {
-        $body = $this->get($user, '/help/topics/'.rawurlencode($topic).'/articles', ['service' => $user->service]);
+        $body = $this->get($user, '/help/topics/'.rawurlencode($topic).'/articles', array_filter(['service' => $this->service($user)], fn (mixed $v): bool => $v !== null));
 
         return array_map(HelpArticle::fromArray(...), Payload::objects($body['data'] ?? []));
+    }
+
+    public function article(SupportUser $user, string $id): HelpArticle
+    {
+        return HelpArticle::fromArray($this->get($user, '/help/articles/'.rawurlencode($id), []));
     }
 
     public function supportUpdates(SupportUser $user, ?DateTimeInterface $since = null, ?string $cursor = null, int $limit = 25, bool $unreadOnly = false): SupportUpdatePage
@@ -65,12 +71,33 @@ class HttpHelpClient implements HelpClient
         return $this->decode(fn (): Response => Http::withToken($token)->acceptJson()->timeout($this->timeout)->get($api.$path, $query));
     }
 
-    /** @return array{0: string, 1: string} */
+    /**
+     * A fresh identity for the person and the API base. Missing or invalid support config (no HTTPS
+     * platform URL, no secret) is a HelpException too, so callers handle one exception type.
+     *
+     * @return array{0: string, 1: string}
+     */
     private function credentials(SupportUser $user): array
     {
-        $session = $this->sessions->forUser($user->subject, $user->account, $user->service, $user->context, $user->name, $user->email);
+        try {
+            $session = $this->sessions->forUser($user->subject, $user->account, $user->service, $user->context, $user->name, $user->email);
+        } catch (LogicException $e) {
+            throw new HelpException('Cbox Assistant support is not configured: '.$e->getMessage(), 0, $e);
+        }
 
         return [$session['identity'], $session['api_url']];
+    }
+
+    /**
+     * The `service` hint in the form Assistant accepts (lower-case letters, digits and dashes, at most
+     * 40 characters). A key that cannot be normalized is left out rather than failing every call:
+     * the service only narrows the search, the widget already scopes it.
+     */
+    private function service(SupportUser $user): ?string
+    {
+        $service = strtolower(trim(str_replace('_', '-', $user->service)));
+
+        return preg_match('/^[a-z0-9-]{1,40}$/D', $service) === 1 ? $service : null;
     }
 
     /**

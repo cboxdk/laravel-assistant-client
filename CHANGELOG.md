@@ -2,10 +2,11 @@
 
 ## Unreleased
 
-- Shell Help column: `AiAssistant::help()` returns a `HelpClient` with `helpSearch()`, `topicArticles()`, `supportUpdates()` and `markRead()` over the Assistant `/v1/help` and `/v1/support` API, typed results, and `HelpException` for problem+json errors. `AiAssistant::fakeHelp()` swaps in `FakeHelpClient` for tests.
-- `SupportSession::forUser()` also returns `api_url`, `search_url`, `topics_url`, `updates_url` and `portal_url` (`AI_ASSISTANT_SUPPORT_PORTAL_URL`, null while offline). New config: `api_url` (`AI_ASSISTANT_API_URL`), `help_timeout`.
+- Shell Help column: `AiAssistant::help()` returns a `HelpClient` with `helpSearch()`, `topicArticles()`, `article()` (with sanitized `bodyHtml`), `supportUpdates()` and `markRead()` over the Assistant `/v1/help` and `/v1/support` API, typed results, and `HelpException` for problem+json errors. `AiAssistant::fakeHelp()` swaps in `FakeHelpClient` for tests.
+- `SupportSession::forUser()` also returns `api_url`, `search_url`, `topics_url`, `article_url`, `updates_url` and `portal_url` (the configured `AI_ASSISTANT_SUPPORT_PORTAL_URL`; the live value arrives later on `cbox-support:session`). New config: `api_url` (`AI_ASSISTANT_API_URL`), `help_timeout`.
 - Knowledge manifest documents accept `topics`; `KnowledgeClient::put()` sends them, so a page's help topic lists its articles.
-- `<cbox-support>` forwards a page intent (route, title, context) when the chat starts and on every change, from `page-*` attributes, `setPage()` or a `cbox:page` window event, and emits `cbox-support:session` with the Help URLs.
+- `<cbox-support>` forwards a page intent (route, title, context) when the chat starts and on every change, from `page-*` attributes, `setPage()` or a `cbox:page` window event, and emits `cbox-support:session` with the Help URLs, and again with Assistant's live `portal_url` once the chat has started.
+- Missing support config raises `HelpException` (status 0) from the Help client, and the `service` key is lower-cased or left out when Assistant would reject it.
 
 ## 0.2.0 — 2026-11-09
 

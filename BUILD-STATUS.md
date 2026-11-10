@@ -4,4 +4,4 @@ The initial release candidate contains the signed bridge, hosted support client,
 
 Host applications must still configure the Assistant workspace, widget, API key, connector secret and authorization policies. Live product acceptance is tracked in the consuming services. Knowledge deletion reconciliation is not included; withdrawals require explicit platform removal.
 
-Unreleased: the Help client for the shared shell (search, page topics, support updates, mark read, with a fake), the Help URLs and portal link in the support session, manifest topics, and the page intent in `<cbox-support>`. They need the matching Cbox Assistant release (`/v1/help`, `/v1/support`, `topics` on knowledge, `page` on the widget session).
+Unreleased: the Help client for the shared shell (search, page topics, article bodies, support updates, mark read, with a fake), the Help URLs and portal link in the support session, manifest topics, and the page intent in `<cbox-support>`. They need the matching Cbox Assistant release (`/v1/help`, `/v1/support`, `topics` on knowledge, `page` on the widget session, `GET /v1/help/articles/{id}`, the `session` postMessage with the live portal link).

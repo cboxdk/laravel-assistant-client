@@ -124,6 +124,49 @@ final class HelpClientTest extends TestCase
         app(HelpClient::class)->helpSearch($this->user(), 'x');
     }
 
+    public function test_an_article_opens_with_its_body(): void
+    {
+        Http::fake(['assistant.test/api/v1/help/articles/hart_01ABC' => Http::response([
+            'id' => 'hart_01ABC', 'object' => 'help_article', 'source' => 'help_centre', 'title' => 'Refund an invoice',
+            'excerpt' => null, 'url' => 'https://help.test/a', 'product' => 'billing', 'updated_at' => null, 'body_html' => '<p>Open the invoice.</p>',
+        ])]);
+
+        $article = AiAssistant::help()->article($this->user(), 'hart_01ABC');
+
+        self::assertSame('<p>Open the invoice.</p>', $article->bodyHtml);
+        self::assertSame('<p>Open the invoice.</p>', $article->toArray()['body_html']);
+        self::assertArrayNotHasKey('body_html', (new HelpArticle(id: 'kart_1'))->toArray());
+        self::assertSame('https://assistant.test/api/v1/help/articles/{id}', app(SupportSession::class)->forUser('person', 'org', 'billing')['article_url']);
+    }
+
+    public function test_the_service_key_is_normalized_or_left_out(): void
+    {
+        Http::fake(['assistant.test/*' => Http::response(['object' => 'list', 'data' => [], 'has_more' => false, 'next_cursor' => null])]);
+        $help = app(HelpClient::class);
+
+        $help->topicArticles(new SupportUser('person-1', 'org-1', ' Cbox_Billing '), 'invoices.index');
+        $help->topicArticles(new SupportUser('person-1', 'org-1', 'billing/admin'), 'invoices.index');
+
+        $sent = Http::recorded()->map(fn (array $pair): string => (string) parse_url($pair[0]->url(), PHP_URL_QUERY))->all();
+        self::assertSame(['service=cbox-billing', ''], $sent);
+    }
+
+    public function test_missing_support_config_is_a_help_exception(): void
+    {
+        config(['ai-assistant-connector.handshake_secret' => null]);
+        try {
+            app(HelpClient::class)->helpSearch($this->user(), 'x');
+            self::fail('Expected a HelpException.');
+        } catch (HelpException $e) {
+            self::assertSame(0, $e->status);
+            self::assertInstanceOf(LogicException::class, $e->getPrevious());
+        }
+
+        config(['ai-assistant-connector.handshake_secret' => self::SECRET, 'ai-assistant-connector.platform.url' => 'http://assistant.test']);
+        $this->expectException(HelpException::class);
+        app(HelpClient::class)->supportUpdates($this->user());
+    }
+
     public function test_the_fake_scopes_updates_per_person_and_organization_and_records_calls(): void
     {
         $help = AiAssistant::fakeHelp();
@@ -138,6 +181,14 @@ final class HelpClientTest extends TestCase
         self::assertSame(0, AiAssistant::help()->supportUpdates(new SupportUser('person-1', 'org-2', 'billing'))->unreadCount);
         self::assertTrue(AiAssistant::help()->markRead($this->user(), 'supd_1')->isRead);
         self::assertSame([], AiAssistant::help()->supportUpdates($this->user(), unreadOnly: true)->data);
+        self::assertSame('Refunds', AiAssistant::help()->article($this->user(), 'kart_1')->title);
+        try {
+            AiAssistant::help()->article($this->user(), 'kart_missing');
+            self::fail('Expected a HelpException.');
+        } catch (HelpException $e) {
+            self::assertSame(404, $e->status);
+        }
+        $help->assertCalled('article', fn (array $args): bool => $args['id'] === 'kart_1');
         $help->assertCalled('helpSearch', fn (array $args, SupportUser $user): bool => $args['query'] === 'refund' && $user->account === 'org-1');
 
         $this->expectException(HelpException::class);

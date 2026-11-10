@@ -42,11 +42,13 @@ readonly class SupportSession
      * authenticated with the same `identity` as a bearer token:
      *  - `search_url`: GET ?q=&service=&topic= for docs, help centre and knowledge base;
      *  - `topics_url`: GET with `{topic}` replaced, the articles for a page's help topic;
+     *  - `article_url`: GET with `{id}` replaced, one article with its body for the Help column;
      *  - `updates_url`: GET the person's support updates; POST `{updates_url}/{id}/read`;
-     *  - `portal_url`: the configured support portal, or null while it is offline.
+     *  - `portal_url`: the configured support portal, or null. The live value (null while the portal
+     *    is offline) comes later from the Assistant chat session; the shell must prefer that one.
      *
      * @param  array<string, string>  $context  Service-owned tenant/project/environment references.
-     * @return array{url: string, identity: string, expires_at: int, api_url: string, search_url: string, topics_url: string, updates_url: string, portal_url: string|null}
+     * @return array{url: string, identity: string, expires_at: int, api_url: string, search_url: string, topics_url: string, article_url: string, updates_url: string, portal_url: string|null}
      */
     public function forUser(string $subject, string $account, string $service, array $context = [], ?string $name = null, ?string $email = null): array
     {
@@ -75,6 +77,7 @@ readonly class SupportSession
             'api_url' => $api,
             'search_url' => $api.'/help/search',
             'topics_url' => $api.'/help/topics/{topic}/articles',
+            'article_url' => $api.'/help/articles/{id}',
             'updates_url' => $api.'/support/updates',
             'portal_url' => $this->portalUrl(),
         ];

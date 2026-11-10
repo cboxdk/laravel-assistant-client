@@ -21,6 +21,12 @@ interface HelpClient
     /** @return list<HelpArticle> */
     public function topicArticles(SupportUser $user, string $topic): array;
 
+    /**
+     * One article with its body (`bodyHtml`), by an id that search or a topic list returned, so the
+     * Help column opens it in place. An id outside the person's scope raises a 404 HelpException.
+     */
+    public function article(SupportUser $user, string $id): HelpArticle;
+
     public function supportUpdates(SupportUser $user, ?DateTimeInterface $since = null, ?string $cursor = null, int $limit = 25, bool $unreadOnly = false): SupportUpdatePage;
 
     public function markRead(SupportUser $user, string $updateId): SupportUpdate;

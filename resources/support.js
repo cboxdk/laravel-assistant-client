@@ -40,6 +40,8 @@
         if (!this.frame || ev.source !== this.frame.contentWindow || ev.origin !== this.origin) return;
         if (ev.data?.__aiAssistant === 'ready') this.sendIdentity();
         if (ev.data?.__aiAssistant === 'close') this.dialog.close();
+        // Assistant's live portal link (null while the portal is offline) wins over the configured one.
+        if (ev.data?.__aiAssistant === 'session' && 'portal_url' in ev.data) this.livePortal(ev.data.portal_url);
         if (ev.data?.__aiAssistant === 'navigate' && typeof ev.data.url === 'string') {
           const next = new URL(ev.data.url, location.origin);
           if (next.origin === location.origin && ['https:', 'http:'].includes(next.protocol)) location.assign(next.href);
@@ -66,7 +68,7 @@
     attributeChangedCallback(name, oldValue, newValue) {
       if (oldValue === newValue || !this.shadowRoot) return;
       if (name !== 'session-url') { this.sendPage(); return; }
-      this.abort?.abort(); this.frame?.remove(); this.frame = null; this.identity = null; this.sentPage = undefined;
+      this.abort?.abort(); this.frame?.remove(); this.frame = null; this.identity = null; this.sentPage = undefined; this.livePortalUrl = undefined;
       this.dialog.close();
     }
     language() { const language = (document.documentElement.lang || 'en').split('-')[0]; return language === 'no' ? 'nb' : language; }
@@ -101,10 +103,19 @@
       if (target.protocol !== 'https:' && !(target.protocol === 'http:' && ['localhost', '127.0.0.1'].includes(target.hostname))) throw new Error('Invalid support endpoint');
       this.identity = session.identity; this.origin = target.origin;
       // What the shell's Help column reads (all null-safe; the chat works without them).
-      this.details = { portal_url: session.portal_url ?? null, updates_url: session.updates_url ?? null, search_url: session.search_url ?? null, topics_url: session.topics_url ?? null };
+      this.details = { portal_url: this.livePortalUrl !== undefined ? this.livePortalUrl : (session.portal_url ?? null), updates_url: session.updates_url ?? null, search_url: session.search_url ?? null, topics_url: session.topics_url ?? null, article_url: session.article_url ?? null };
       this.dispatchEvent(new CustomEvent('cbox-support:session', { detail: this.details, bubbles: true, composed: true }));
       this.sendIdentity();
       return target;
+    }
+    livePortal(value) {
+      let portal = null;
+      if (typeof value === 'string') {
+        try { const url = new URL(value); if (url.protocol === 'https:') portal = url.href; } catch { portal = null; }
+      }
+      this.livePortalUrl = portal;
+      this.details = { ...(this.details || {}), portal_url: portal };
+      this.dispatchEvent(new CustomEvent('cbox-support:session', { detail: this.details, bubbles: true, composed: true }));
     }
     async open() {
       this.dialog.showModal();

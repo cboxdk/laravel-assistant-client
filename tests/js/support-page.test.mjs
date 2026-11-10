@@ -26,6 +26,7 @@ function mount(attributes = {}) {
   let Support;
   vm.runInNewContext(source, {
     HTMLElement: Element, URL,
+    CustomEvent: class { constructor(type, init) { this.type = type; this.detail = init?.detail; } },
     customElements: { get: () => undefined, define: (name, value) => { Support = value; } },
     document: { currentScript: { src: 'https://product.example/ai-assistant/support.js' }, documentElement: { lang: 'en', dataset: {}, classList: { contains: () => false } }, createElement: () => new Element() },
     window: {
@@ -86,4 +87,29 @@ test('does not post a page before the chat frame exists', () => {
   const { element, messages } = mount({ 'page-route': 'invoices.index' });
   element.attributeChangedCallback('page-route', null, 'invoices.index');
   assert.equal(messages.length, 0);
+});
+
+test('the live portal link from Assistant replaces the configured one', () => {
+  const { element, open, windowListeners } = mount();
+  const events = [];
+  element.dispatchEvent = (event) => { events.push(event); return true; };
+  open();
+  element.details = { portal_url: 'https://configured.example', updates_url: null, search_url: null, topics_url: null };
+  const message = windowListeners.get('message');
+
+  // Only the chat frame's own origin is heard.
+  message({ source: {}, origin: 'https://assistant.example', data: { __aiAssistant: 'session', portal_url: null } });
+  message({ source: element.frame.contentWindow, origin: 'https://evil.example', data: { __aiAssistant: 'session', portal_url: null } });
+  assert.equal(events.length, 0);
+
+  message({ source: element.frame.contentWindow, origin: 'https://assistant.example', data: { __aiAssistant: 'session', portal_url: 'https://support.example/' } });
+  assert.equal(events.at(-1).type, 'cbox-support:session');
+  assert.equal(events.at(-1).detail.portal_url, 'https://support.example/');
+
+  // Offline (null) and anything that is not an https URL hide the link.
+  message({ source: element.frame.contentWindow, origin: 'https://assistant.example', data: { __aiAssistant: 'session', portal_url: null } });
+  assert.equal(events.at(-1).detail.portal_url, null);
+  message({ source: element.frame.contentWindow, origin: 'https://assistant.example', data: { __aiAssistant: 'session', portal_url: 'javascript:alert(1)' } });
+  assert.equal(events.at(-1).detail.portal_url, null);
+  assert.equal(element.livePortalUrl, null);
 });

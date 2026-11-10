@@ -19,17 +19,28 @@ and `identity`:
 |---|---|
 | `search_url` | `GET ?q=&service=&topic=` for docs, help centre and knowledge base, grouped by source. |
 | `topics_url` | Replace `{topic}` with the page's help topic for its "For this page" articles (up to 3). |
+| `article_url` | Replace `{id}` with a result's id to open it inside the column: the article plus `body_html` (sanitized). |
 | `updates_url` | `GET` the person's support updates; `POST {updates_url}/{id}/read` marks one read. |
 | `api_url` | The Assistant API base. Set `AI_ASSISTANT_API_URL` once `api.cboxassistant.com/v1` is live. |
-| `portal_url` | `AI_ASSISTANT_SUPPORT_PORTAL_URL`, or `null` while the portal is offline. |
+| `portal_url` | The configured `AI_ASSISTANT_SUPPORT_PORTAL_URL`, or `null`. A starting value only; see below. |
 
 Send `identity` as `Authorization: Bearer …` on each call. It lasts three minutes; on a 401,
 fetch the session endpoint again. The organization and person come from the token, never from
 the URL. Errors are `application/problem+json`. The updates list also carries a `broadcast`
 descriptor to hear `support.update.created` live instead of polling.
 
-The Assistant chat session also returns the live `portal_url`, which is `null` while the portal
-is offline. Prefer it once the chat has started.
+The service cannot know whether the portal is online without calling Assistant, and a page never
+does that. The live value comes from the Assistant chat session instead: once the chat has started,
+`<cbox-support>` emits `cbox-support:session` again with Assistant's `portal_url`, which is `null`
+while the portal is offline. The shell must always use the latest event's `portal_url` and hide
+the "Support portal" link when it is `null`:
+
+```js
+document.addEventListener('cbox-support:session', (event) => {
+  supportLink.hidden = !event.detail.portal_url;
+  if (event.detail.portal_url) supportLink.href = event.detail.portal_url;
+});
+```
 
 ## Page topics
 
@@ -72,9 +83,12 @@ $user = new SupportUser($person->id, $organization->id, 'billing', ['environment
 
 AiAssistant::help()->helpSearch($user, 'refund', topic: 'invoices.index');
 AiAssistant::help()->topicArticles($user, 'invoices.index');
+AiAssistant::help()->article($user, 'kart_…')->bodyHtml;
 AiAssistant::help()->supportUpdates($user, unreadOnly: true);
 AiAssistant::help()->markRead($user, 'supd_…');
 ```
 
-Errors raise `HelpException` with the HTTP `status`. In tests, `AiAssistant::fakeHelp()` swaps in
+Errors raise `HelpException` with the HTTP `status`; missing support config raises it too, with
+status 0. The service key is sent lower-cased (`_` becomes `-`) and left out when it still does not
+match `[a-z0-9-]{1,40}`. In tests, `AiAssistant::fakeHelp()` swaps in
 an in-memory `FakeHelpClient`; see [Testing](../getting-started/testing.md).
