@@ -5,8 +5,12 @@ declare(strict_types=1);
 namespace Cbox\AiAssistant\Connector;
 
 use Cbox\AiAssistant\Connector\Embedded\EmbeddedRunner;
+use Cbox\AiAssistant\Connector\Help\HelpClient;
+use Cbox\AiAssistant\Connector\Help\HttpHelpClient;
 use Cbox\AiAssistant\Connector\Knowledge\SyncSupportKnowledge;
+use Cbox\AiAssistant\Connector\Support\Configuration;
 use Cbox\AiAssistant\Connector\Support\PrincipalResolver;
+use Cbox\AiAssistant\Connector\Support\SupportSession;
 use Illuminate\Contracts\Config\Repository;
 use Illuminate\Contracts\Foundation\Application;
 use Illuminate\Support\Facades\Route;
@@ -29,6 +33,10 @@ class AiAssistantConnectorServiceProvider extends ServiceProvider
             $app->make(ToolRegistry::class),
             $app->make(PrincipalResolver::class),
             $app->make(Repository::class),
+        ));
+        $this->app->bind(HelpClient::class, fn (Application $app): HelpClient => new HttpHelpClient(
+            $app->make(SupportSession::class),
+            Configuration::positiveInteger($app->make(Repository::class), 'ai-assistant-connector.help_timeout', 5),
         ));
         $this->app->singleton(ConnectorManager::class, fn (Application $app): ConnectorManager => new ConnectorManager(
             $app->make(ToolRegistry::class),

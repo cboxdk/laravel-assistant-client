@@ -45,4 +45,9 @@ class Payload
 
         return $value;
     }
+
+    public static function nullableString(mixed $value): ?string
+    {
+        return $value === null ? null : self::string($value);
+    }
 }
