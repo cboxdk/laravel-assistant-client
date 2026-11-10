@@ -1,4 +1,7 @@
-/* Shared product support surface. The host serves its authenticated session endpoint. */
+/* Shared product support surface. The host serves its authenticated session endpoint.
+ * Page intent: set `page-route`, `page-title` and `page-context` (or call `setPage({ route, title,
+ * context })`, or dispatch `cbox:page` on window with that detail) and the chat is told which page
+ * the person is on, at session start and again on every change. */
 (() => {
   if (customElements.get('cbox-support')) return;
   const labels = {
@@ -14,7 +17,7 @@
   };
   const assets = new URL('.', document.currentScript.src);
   class Support extends HTMLElement {
-    static get observedAttributes() { return ['session-url']; }
+    static get observedAttributes() { return ['session-url', 'page-route', 'page-title', 'page-context']; }
     connectedCallback() {
       if (this.shadowRoot) return;
       const shadow = this.attachShadow({ mode: 'open' });
@@ -43,6 +46,8 @@
         }
       };
       window.addEventListener('message', this.onMessage);
+      this.onPage = (ev) => this.setPage(ev.detail);
+      window.addEventListener('cbox:page', this.onPage);
       this.colorScheme = window.matchMedia('(prefers-color-scheme: dark)');
       this.onColorSchemeChange = () => this.presentation();
       this.colorScheme.addEventListener('change', this.onColorSchemeChange);
@@ -54,12 +59,14 @@
     disconnectedCallback() {
       this.observer?.disconnect(); clearInterval(this.timer);
       window.removeEventListener('message', this.onMessage);
+      window.removeEventListener('cbox:page', this.onPage);
       this.colorScheme?.removeEventListener('change', this.onColorSchemeChange);
       this.abort?.abort();
     }
     attributeChangedCallback(name, oldValue, newValue) {
       if (oldValue === newValue || !this.shadowRoot) return;
-      this.abort?.abort(); this.frame?.remove(); this.frame = null; this.identity = null;
+      if (name !== 'session-url') { this.sendPage(); return; }
+      this.abort?.abort(); this.frame?.remove(); this.frame = null; this.identity = null; this.sentPage = undefined;
       this.dialog.close();
     }
     language() { const language = (document.documentElement.lang || 'en').split('-')[0]; return language === 'no' ? 'nb' : language; }
@@ -93,6 +100,9 @@
       const target = new URL(session.url);
       if (target.protocol !== 'https:' && !(target.protocol === 'http:' && ['localhost', '127.0.0.1'].includes(target.hostname))) throw new Error('Invalid support endpoint');
       this.identity = session.identity; this.origin = target.origin;
+      // What the shell's Help column reads (all null-safe; the chat works without them).
+      this.details = { portal_url: session.portal_url ?? null, updates_url: session.updates_url ?? null, search_url: session.search_url ?? null, topics_url: session.topics_url ?? null };
+      this.dispatchEvent(new CustomEvent('cbox-support:session', { detail: this.details, bubbles: true, composed: true }));
       this.sendIdentity();
       return target;
     }
@@ -117,10 +127,35 @@
       } catch (error) { if (error.name !== 'AbortError') this.unavailable(); }
     }
     sendIdentity() {
-      if (this.frame && this.identity) this.frame.contentWindow?.postMessage({ __aiAssistant: 'identity', jwt: this.identity, theme: this.theme, locale: this.language() }, this.origin);
+      if (!this.frame || !this.identity) return;
+      const page = this.page();
+      this.sentPage = JSON.stringify(page);
+      this.frame.contentWindow?.postMessage({ __aiAssistant: 'identity', jwt: this.identity, theme: this.theme, locale: this.language(), page }, this.origin);
+    }
+    page() {
+      const limits = { route: 200, title: 200, context: 300 };
+      const page = {};
+      for (const key of Object.keys(limits)) {
+        const value = (this.pageOverride && typeof this.pageOverride[key] === 'string') ? this.pageOverride[key] : this.getAttribute('page-' + key);
+        if (typeof value === 'string' && value.trim()) page[key] = value.trim().slice(0, limits[key]);
+      }
+      return Object.keys(page).length ? page : null;
+    }
+    setPage(page) {
+      this.pageOverride = page && typeof page === 'object' ? { route: page.route, title: page.title, context: page.context } : null;
+      this.sendPage();
+    }
+    sendPage() {
+      const page = this.page();
+      const key = JSON.stringify(page);
+      if (key === this.sentPage) return;
+      if (this.frame && this.identity) {
+        this.sentPage = key;
+        this.frame.contentWindow?.postMessage({ __aiAssistant: 'page', page }, this.origin);
+      }
     }
     unavailable() {
-      this.frame?.remove(); this.frame = null; this.identity = null;
+      this.frame?.remove(); this.frame = null; this.identity = null; this.sentPage = undefined;
       this.status.hidden = false;
       this.status.textContent = (labels[this.language()] || labels.en)[3];
     }
