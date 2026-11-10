@@ -1,6 +1,6 @@
 # Changelog
 
-## Unreleased
+## 0.2.1 — 2026-11-10
 
 - Shell Help column: `AiAssistant::help()` returns a `HelpClient` with `helpSearch()`, `topicArticles()`, `article()` (with sanitized `bodyHtml`), `supportUpdates()` and `markRead()` over the Assistant `/v1/help` and `/v1/support` API, typed results, and `HelpException` for problem+json errors. `AiAssistant::fakeHelp()` swaps in `FakeHelpClient` for tests.
 - `SupportSession::forUser()` also returns `api_url`, `search_url`, `topics_url`, `article_url`, `updates_url` and `portal_url` (the configured `AI_ASSISTANT_SUPPORT_PORTAL_URL`; the live value arrives later on `cbox-support:session`). New config: `api_url` (`AI_ASSISTANT_API_URL`), `help_timeout`.
