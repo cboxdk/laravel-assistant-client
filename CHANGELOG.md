@@ -1,5 +1,10 @@
 # Changelog
 
+## 0.2.2 — 2026-11-17
+
+- Retry knowledge publishing after connection failures, HTTP 408/429 and 5xx responses, with three attempts and 10/30-second delays. Authentication errors, revision conflicts and missing indexing acknowledgements still fail; exhausted retries still fail the sync command.
+- Bound connection establishment to 10 seconds and log retry metadata without credentials or document contents. Document the deployment timeout budget and support-only recovery procedure.
+
 ## 0.2.1 — 2026-11-10
 
 - Shell Help column: `AiAssistant::help()` returns a `HelpClient` with `helpSearch()`, `topicArticles()`, `article()` (with sanitized `bodyHtml`), `supportUpdates()` and `markRead()` over the Assistant `/v1/help` and `/v1/support` API, typed results, and `HelpException` for problem+json errors. `AiAssistant::fakeHelp()` swaps in `FakeHelpClient` for tests.

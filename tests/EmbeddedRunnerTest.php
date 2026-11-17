@@ -8,8 +8,11 @@ use Cbox\AiAssistant\Connector\Embedded\EmbeddedException;
 use Cbox\AiAssistant\Connector\Facades\AiAssistant;
 use Cbox\AiAssistant\Connector\Knowledge\KnowledgeClient;
 use Cbox\AiAssistant\Connector\Support\ToolContext;
+use Illuminate\Http\Client\ConnectionException;
 use Illuminate\Http\Client\Request;
 use Illuminate\Support\Facades\Http;
+use Illuminate\Support\Sleep;
+use PHPUnit\Framework\Attributes\DataProvider;
 
 /**
  * The embedded runner: this app drives the loop against the platform's reasoning API and
@@ -37,6 +40,85 @@ final class EmbeddedRunnerTest extends TestCase
         Http::fake(['reasoning.test/*' => Http::response('<html>Proxy error</html>', 200)]);
         $this->expectException(EmbeddedException::class);
         (new KnowledgeClient(app('config')))->put('billing', 'product', 'guide', 'Title', 'Text', 'https://example.test/guide', 1);
+    }
+
+    #[DataProvider('transientKnowledgeStatuses')]
+    public function test_knowledge_sync_recovers_from_transient_http_failures(int $status): void
+    {
+        Sleep::fake();
+        Http::fake(['reasoning.test/*' => Http::sequence()
+            ->push([], $status)
+            ->push([], $status)
+            ->push(['data' => ['status' => 'indexed']])]);
+
+        app(KnowledgeClient::class)->put('billing', 'product', 'guide', 'Title', 'Text', 'https://example.test/guide', 7);
+
+        Http::assertSentCount(3);
+        Http::assertSent(fn (Request $request): bool => $request->method() === 'PUT'
+            && $request['revision'] === 7 && $request['content'] === 'Text');
+        Sleep::assertSequence([Sleep::for(10)->seconds(), Sleep::for(30)->seconds()]);
+    }
+
+    public static function transientKnowledgeStatuses(): array
+    {
+        return [[408], [429], [500], [502], [503], [504], [530]];
+    }
+
+    #[DataProvider('permanentKnowledgeStatuses')]
+    public function test_knowledge_sync_stops_on_permanent_errors_even_after_a_transient_failure(int $status): void
+    {
+        Sleep::fake();
+        Http::fake(['reasoning.test/*' => Http::sequence()
+            ->push([], 530)
+            ->push(['data' => ['status' => 'pending']], $status)
+            ->push(['data' => ['status' => 'indexed']])]);
+
+        try {
+            app(KnowledgeClient::class)->put('billing', 'product', 'guide', 'Title', 'Text', 'https://example.test/guide', 1);
+            self::fail('An unacknowledged document must fail sync.');
+        } catch (EmbeddedException $exception) {
+            self::assertSame('Knowledge sync failed with status '.$status.'.', $exception->getMessage());
+        }
+        Http::assertSentCount(2);
+    }
+
+    public static function permanentKnowledgeStatuses(): array
+    {
+        return [[200], [202], [400], [401], [403], [404], [409], [422]];
+    }
+
+    public function test_knowledge_sync_still_fails_when_http_retries_are_exhausted(): void
+    {
+        Sleep::fake();
+        Http::fake(['reasoning.test/*' => Http::response([], 530)]);
+
+        try {
+            app(KnowledgeClient::class)->put('billing', 'product', 'guide', 'Title', 'Text', 'https://example.test/guide', 1);
+            self::fail('An outage must not be reported as success.');
+        } catch (EmbeddedException $exception) {
+            self::assertSame('Knowledge sync failed with status 530.', $exception->getMessage());
+        }
+        Http::assertSentCount(3);
+    }
+
+    public function test_knowledge_sync_retries_connection_errors_but_does_not_hide_an_outage(): void
+    {
+        Sleep::fake();
+        $attempts = 0;
+        Http::fake(function () use (&$attempts) {
+            $attempts++;
+            if ($attempts < 3) {
+                throw new ConnectionException('Connection unavailable');
+            }
+
+            return Http::response(['data' => ['status' => 'indexed']]);
+        });
+        app(KnowledgeClient::class)->put('billing', 'product', 'guide', 'Title', 'Text', 'https://example.test/guide', 1);
+        self::assertSame(3, $attempts);
+
+        Http::fake(fn () => throw new ConnectionException('Still unavailable'));
+        $this->expectException(ConnectionException::class);
+        app(KnowledgeClient::class)->put('billing', 'product', 'guide', 'Title', 'Text', 'https://example.test/guide', 1);
     }
 
     public function test_context_survives_as_and_is_sent_on_both_sides_of_a_tool_round(): void
