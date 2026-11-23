@@ -25,6 +25,8 @@ Allow the exact origin returned by `SupportSession::frameOrigin()` in the host C
 
 To tell the chat which page the person is on, set `page-route`, `page-title` and `page-context`; see [Shell Help column](shell-help.md).
 
-The parent accepts messages only from the configured iframe origin and window. Same-origin product links navigate in the existing window. Service assertions refresh through the host endpoint; an authorization failure closes the frame.
+Call `element.ask('How do I …?')` to open the chat with the person's question as their first message, and `element.handover()` to ask for a person; both resolve `false` when the chat could not be opened. Add `inline` to render the chat inside the element (size it yourself, show it on `cbox-support:open`, hide it on `cbox-support:close`) instead of a dialog over the page.
+
+The parent accepts messages only from the configured iframe origin and window. A same-origin product link raises a cancelable `cbox-support:navigate` event with `detail.url`: a single-page app calls `preventDefault()` and visits the URL with its own router, so the chat stays open. Otherwise the page loads in the existing window and the chat opens again there. Service assertions refresh through the host endpoint; an authorization failure closes the frame.
 
 Before calling a rollout complete, verify light/dark themes, language changes, mobile overflow, internal navigation, organization changes, an authorized tool, a cited guide and a human reply in the same browser conversation.

@@ -16,3 +16,10 @@
 
 .open{display:flex;align-items:center;justify-content:center;gap:7px;white-space:nowrap;min-height:34px}
 @media(max-width:900px){.open{width:34px;padding:7px}.launcher-label{display:none}}
+
+/* Inline: the chat fills the element the host sized, instead of a dialog over the page. */
+:host([inline]){display:block;width:100%;height:100%;min-height:0}
+:host([inline]) .open,:host([inline]) header{display:none}
+:host([inline]) dialog{position:static;inset:auto;width:100%;height:100%;border:0;border-radius:0;box-shadow:none;background:transparent}
+:host([inline][data-theme=dark]) dialog{background:transparent}
+:host([inline]) .status{padding:32px 20px;text-align:center;font-size:13px;color:var(--muted-foreground,#777)}
