@@ -1,6 +1,6 @@
 # Changelog
 
-## Unreleased
+## 0.2.3 — 2026-11-23
 
 - `<cbox-support>`: `ask(question, page?)` opens the chat and sends the question as the person's own message once the chat is ready; `handover()` asks for a person. Both resolve `false` when the chat could not be opened, so a host keeps what was typed. `open()` resolves the same way, and `close()` hides the chat with its conversation kept.
 - `inline` attribute: the chat fills the element instead of opening a dialog over the page, and Assistant's chat page is asked (`?inline=column`, or `sheet` for `inline="sheet"` on a phone) to wear the shell's surfaces, field and send button. The element emits `cbox-support:open` (`detail.inline`) and `cbox-support:close` (`detail.reason`, `"unavailable"` when the chat was lost).
