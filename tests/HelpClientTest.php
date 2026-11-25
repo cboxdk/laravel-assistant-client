@@ -42,8 +42,10 @@ final class HelpClientTest extends TestCase
     {
         $session = app(SupportSession::class)->forUser('person', 'org', 'billing');
         self::assertSame('https://assistant.test/api/v1', $session['api_url']);
-        self::assertSame('https://assistant.test/api/v1/help/search', $session['search_url']);
-        self::assertSame('https://assistant.test/api/v1/help/topics/{topic}/articles', $session['topics_url']);
+        // Search and topic lists are asked for in the reader's language: the application's locale.
+        self::assertSame('https://assistant.test/api/v1/help/search?locale=en', $session['search_url']);
+        self::assertSame('https://assistant.test/api/v1/help/topics/{topic}/articles?locale=en', $session['topics_url']);
+        self::assertSame('https://assistant.test/api/v1/help/articles/{id}', $session['article_url']);
         self::assertSame('https://assistant.test/api/v1/support/updates', $session['updates_url']);
         self::assertNull($session['portal_url']);
 
@@ -54,6 +56,29 @@ final class HelpClientTest extends TestCase
 
         config(['ai-assistant-connector.support.portal_url' => 'http://insecure.test']);
         self::assertNull(app(SupportSession::class)->forUser('person', 'org', 'billing')['portal_url']);
+    }
+
+    public function test_the_readers_language_is_the_applications_locale_unless_the_host_names_one(): void
+    {
+        Http::fake(['assistant.test/*' => Http::response(['object' => 'list', 'data' => [], 'has_more' => false, 'next_cursor' => null, 'groups' => []])]);
+        $sessions = app(SupportSession::class);
+        $help = app(HelpClient::class);
+
+        app()->setLocale('da');
+        self::assertSame('https://assistant.test/api/v1/help/search?locale=da', $sessions->forUser('person', 'org', 'billing')['search_url']);
+        // A host whose interface language is not the application's locale names it.
+        self::assertSame('https://assistant.test/api/v1/help/topics/{topic}/articles?locale=de-AT', $sessions->forUser('person', 'org', 'billing', locale: 'de-AT')['topics_url']);
+        $help->topicArticles($this->user(), 'invoices.index');
+        $help->helpSearch(new SupportUser('person-1', 'org-1', 'billing', locale: 'sv'), 'refund');
+
+        // Assistant refuses a locale that is not a language tag, so one is never sent.
+        app()->setLocale('not a tag');
+        self::assertSame('https://assistant.test/api/v1/help/search', $sessions->forUser('person', 'org', 'billing')['search_url']);
+        self::assertSame('https://assistant.test/api/v1/help/search', $sessions->forUser('person', 'org', 'billing', locale: str_repeat('a', 3).str_repeat('-abcdefgh', 4))['search_url']);
+        $help->topicArticles($this->user(), 'invoices.index');
+
+        $sent = Http::recorded()->map(fn (array $pair): string => (string) parse_url($pair[0]->url(), PHP_URL_QUERY))->all();
+        self::assertSame(['service=billing&locale=da', 'q=refund&service=billing&limit=5&locale=sv', 'service=billing'], $sent);
     }
 
     public function test_help_search_sends_a_signed_identity_and_maps_the_grouped_response(): void
@@ -75,7 +100,7 @@ final class HelpClientTest extends TestCase
             parse_str((string) parse_url($request->url(), PHP_URL_QUERY), $query);
             $claims = (array) JWT::decode(substr($request->header('Authorization')[0], 7), new Key(self::SECRET, 'HS256'));
 
-            return $query === ['q' => 'refund', 'service' => 'billing', 'topic' => 'invoices.index', 'limit' => '3']
+            return $query === ['q' => 'refund', 'service' => 'billing', 'topic' => 'invoices.index', 'limit' => '3', 'locale' => 'en']
                 && $claims['sub'] === 'person-1' && $claims['account_id'] === 'org-1' && $claims['aud'] === 'widget-identity'
                 && (array) $claims['service_context'] === ['service' => 'billing', 'environment' => 'live'];
         });
@@ -148,7 +173,7 @@ final class HelpClientTest extends TestCase
         $help->topicArticles(new SupportUser('person-1', 'org-1', 'billing/admin'), 'invoices.index');
 
         $sent = Http::recorded()->map(fn (array $pair): string => (string) parse_url($pair[0]->url(), PHP_URL_QUERY))->all();
-        self::assertSame(['service=cbox-billing', ''], $sent);
+        self::assertSame(['service=cbox-billing&locale=en', 'locale=en'], $sent);
     }
 
     public function test_missing_support_config_is_a_help_exception(): void

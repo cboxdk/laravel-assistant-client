@@ -24,6 +24,16 @@ and `identity`:
 | `api_url` | The Assistant API base. Set `AI_ASSISTANT_API_URL` once `api.cboxassistant.com/v1` is live. |
 | `portal_url` | The configured `AI_ASSISTANT_SUPPORT_PORTAL_URL`, or `null`. A starting value only; see below. |
 
+`search_url` and `topics_url` carry `locale`, the language the person reads your service in.
+Assistant then returns each guide in that language where you published it (see
+[Guides in several languages](#guides-in-several-languages)), and in English otherwise.
+`forUser()` takes the application's locale. Pass `locale:` when your interface language is kept
+somewhere else, such as a cookie of the operator's own choice:
+
+```php
+$session = $support->forUser($person->id, $organization->id, 'billing', locale: $consoleLanguage);
+```
+
 Send `identity` as `Authorization: Bearer …` on each call. It lasts three minutes; on a 401,
 fetch the session endpoint again. The organization and person come from the token, never from
 the URL. Errors are `application/problem+json`. The updates list also carries a `broadcast`
@@ -56,6 +66,27 @@ Give a manifest document the page help topics it answers:
 
 A plain entry ranks the document by its place in the manifest. A `topic => position` entry sets
 the position. Topics are lowercase route-name-like keys. Changing them needs a new `revision`.
+
+## Guides in several languages
+
+Publish a translation as one more manifest document: its own key, the same `path` and `topics`
+as the original, and its own `locale`. Assistant takes documents with one address and different
+locales as versions of one page and shows a reader one of them: theirs, else the English one.
+
+```php
+'refunds' => [
+    'file' => 'refunds.en.md', 'title' => 'Refund an invoice', 'path' => '/ai-assistant/guides/refunds',
+    'revision' => 2, 'locale' => 'en', 'topics' => ['invoices.index'],
+],
+'refunds-da' => [
+    'file' => 'refunds.da.md', 'title' => 'Refundér en faktura', 'path' => '/ai-assistant/guides/refunds',
+    'revision' => 1, 'locale' => 'da', 'topics' => ['invoices.index'],
+],
+```
+
+Keep the originals where they stand in the manifest and add translations after them: a document
+that moves gets another position under its topics, and that needs a new `revision`. The page at
+`path` should answer in the reader's language too, since every version links to it.
 
 ## Page intent
 

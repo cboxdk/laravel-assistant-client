@@ -6,6 +6,7 @@ namespace Cbox\AiAssistant\Connector\Support;
 
 use Firebase\JWT\JWT;
 use Illuminate\Contracts\Config\Repository;
+use Illuminate\Support\Facades\App;
 use LogicException;
 
 /** The host authenticates/authorizes first. Only a short-lived widget assertion reaches its UI. */
@@ -42,15 +43,20 @@ readonly class SupportSession
      * authenticated with the same `identity` as a bearer token:
      *  - `search_url`: GET ?q=&service=&topic= for docs, help centre and knowledge base;
      *  - `topics_url`: GET with `{topic}` replaced, the articles for a page's help topic;
+     *    both carry `locale`, so Assistant returns each guide in the reader's language where the
+     *    service published it in that language;
      *  - `article_url`: GET with `{id}` replaced, one article with its body for the Help column;
      *  - `updates_url`: GET the person's support updates; POST `{updates_url}/{id}/read`;
      *  - `portal_url`: the configured support portal, or null. The live value (null while the portal
      *    is offline) comes later from the Assistant chat session; the shell must prefer that one.
      *
      * @param  array<string, string>  $context  Service-owned tenant/project/environment references.
+     * @param  string|null  $locale  The language the person reads the service in (`da`, `da-DK`).
+     *                               Defaults to the application's locale; pass it when the
+     *                               interface language is kept somewhere else.
      * @return array{url: string, identity: string, expires_at: int, api_url: string, search_url: string, topics_url: string, article_url: string, updates_url: string, portal_url: string|null}
      */
-    public function forUser(string $subject, string $account, string $service, array $context = [], ?string $name = null, ?string $email = null): array
+    public function forUser(string $subject, string $account, string $service, array $context = [], ?string $name = null, ?string $email = null, ?string $locale = null): array
     {
         $widget = $this->config->get('ai-assistant-connector.support.widget');
         $secret = $this->config->get('ai-assistant-connector.handshake_secret');
@@ -69,18 +75,32 @@ readonly class SupportSession
             'service_context' => ['service' => $service, ...array_intersect_key($context, array_flip(['tenant', 'project', 'environment']))],
         ];
         $api = $this->apiUrl();
+        $reader = self::readerLocale($locale);
+        $inLanguage = $reader === null ? '' : '?locale='.rawurlencode($reader);
 
         return [
             'url' => $url.'/embed/'.rawurlencode($widget),
             'identity' => JWT::encode($claims, $secret, 'HS256'),
             'expires_at' => $expires,
             'api_url' => $api,
-            'search_url' => $api.'/help/search',
-            'topics_url' => $api.'/help/topics/{topic}/articles',
+            'search_url' => $api.'/help/search'.$inLanguage,
+            'topics_url' => $api.'/help/topics/{topic}/articles'.$inLanguage,
             'article_url' => $api.'/help/articles/{id}',
             'updates_url' => $api.'/support/updates',
             'portal_url' => $this->portalUrl(),
         ];
+    }
+
+    /**
+     * The reader's language as Assistant's Help API takes it in `locale`: the given tag, else the
+     * application's locale. A value that is not a language tag is left out, because Assistant
+     * refuses it and Help would lose its articles; without `locale` it answers in English.
+     */
+    public static function readerLocale(?string $locale = null): ?string
+    {
+        $locale = trim($locale ?? App::getLocale());
+
+        return strlen($locale) <= 35 && preg_match('/^[A-Za-z]{2,3}(?:[-_][A-Za-z0-9]{1,8})*$/D', $locale) === 1 ? $locale : null;
     }
 
     private function portalUrl(): ?string
