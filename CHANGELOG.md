@@ -1,5 +1,9 @@
 # Changelog
 
+## 0.2.5 — 2026-11-25
+
+- The guide page (`/ai-assistant/guides/{key}`) answers in the reader's language. Manifest documents with one `path` and different `locale` are versions of one page; before, the page always showed the document of the key in its address, so a Danish answer linked to English text. The reader's language is the browser's `Accept-Language`, in its order. The response carries `Vary: Accept-Language`. Nothing changes for a service whose guides exist in one language.
+
 ## 0.2.4 — 2026-11-25
 
 - Help in the reader's language: `SupportSession::forUser()` adds `locale` to `search_url` and `topics_url`, and `HelpClient::helpSearch()` and `topicArticles()` send it. Cbox Assistant then returns each guide in that language where the service published it in that language, and in English otherwise. Nothing changes for a service whose guides exist in one language.
