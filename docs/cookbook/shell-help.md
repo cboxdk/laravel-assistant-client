@@ -85,8 +85,14 @@ locales as versions of one page and shows a reader one of them: theirs, else the
 ```
 
 Keep the originals where they stand in the manifest and add translations after them: a document
-that moves gets another position under its topics, and that needs a new `revision`. The page at
-`path` should answer in the reader's language too, since every version links to it.
+that moves gets another position under its topics, and that needs a new `revision`.
+
+Every version links to the page at `path`, so that page answers in the reader's language too.
+The connector's own guide page (`/ai-assistant/guides/{key}`) does: asked for at the address the
+versions share, it shows the version in the reader's language, else the document of that key.
+The reader's language there is the browser's `Accept-Language`, in its order: the page is public
+and knows nothing else about its reader. A `path` that points at a page of your own must make
+that choice itself.
 
 ## Page intent
 
