@@ -1,5 +1,12 @@
 # Changelog
 
+## 0.2.4 — 2026-11-25
+
+- Help in the reader's language: `SupportSession::forUser()` adds `locale` to `search_url` and `topics_url`, and `HelpClient::helpSearch()` and `topicArticles()` send it. Cbox Assistant then returns each guide in that language where the service published it in that language, and in English otherwise. Nothing changes for a service whose guides exist in one language.
+- The language is the application's locale. A host whose interface language lives elsewhere passes it: `forUser(..., locale: 'da')`, or `new SupportUser(..., locale: 'da')` for the Help client. A value that is not a language tag is left out.
+- Docs: how to publish a guide in several languages (one manifest document per language, with the same `path` and `topics`).
+- Needs Cbox Assistant's Help API to know `locale` (live since 2026-11-25); an older Assistant ignores it.
+
 ## 0.2.3 — 2026-11-23
 
 - `<cbox-support>`: `ask(question, page?)` opens the chat and sends the question as the person's own message once the chat is ready; `handover()` asks for a person. Both resolve `false` when the chat could not be opened, so a host keeps what was typed. `open()` resolves the same way, and `close()` hides the chat with its conversation kept.

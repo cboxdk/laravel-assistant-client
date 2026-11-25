@@ -27,12 +27,15 @@ class HttpHelpClient implements HelpClient
     {
         return HelpSearchResult::fromArray($this->get($user, '/help/search', array_filter([
             'q' => $query, 'service' => $this->service($user), 'topic' => $topic, 'limit' => $limit,
+            'locale' => SupportSession::readerLocale($user->locale),
         ], fn (mixed $v): bool => $v !== null)));
     }
 
     public function topicArticles(SupportUser $user, string $topic): array
     {
-        $body = $this->get($user, '/help/topics/'.rawurlencode($topic).'/articles', array_filter(['service' => $this->service($user)], fn (mixed $v): bool => $v !== null));
+        $body = $this->get($user, '/help/topics/'.rawurlencode($topic).'/articles', array_filter([
+            'service' => $this->service($user), 'locale' => SupportSession::readerLocale($user->locale),
+        ], fn (mixed $v): bool => $v !== null));
 
         return array_map(HelpArticle::fromArray(...), Payload::objects($body['data'] ?? []));
     }
@@ -80,7 +83,7 @@ class HttpHelpClient implements HelpClient
     private function credentials(SupportUser $user): array
     {
         try {
-            $session = $this->sessions->forUser($user->subject, $user->account, $user->service, $user->context, $user->name, $user->email);
+            $session = $this->sessions->forUser($user->subject, $user->account, $user->service, $user->context, $user->name, $user->email, $user->locale);
         } catch (LogicException $e) {
             throw new HelpException('Cbox Assistant support is not configured: '.$e->getMessage(), 0, $e);
         }
