@@ -26,6 +26,8 @@
     es: ['Pregunta a Cbox', 'Cerrar', 'Conectando…', 'No se pudo abrir el soporte. Inténtalo de nuevo.'],
     it: ['Chiedi a Cbox', 'Chiudi', 'Connessione…', 'Impossibile aprire il supporto. Riprova.'],
   };
+  // The language part of a tag (`da-DK` is `da`); Norwegian is Bokmål.
+  const base = (tag) => { const language = (tag || 'en').split(/[-_]/)[0].toLowerCase(); return language === 'no' ? 'nb' : language; };
   const assets = new URL('.', document.currentScript.src);
   // Set just before a full page load from a link in the chat, so the next page opens it again.
   const REOPEN_KEY = 'cbox-support:reopen', REOPEN_WITHIN_MS = 15000;
@@ -97,7 +99,9 @@
       this.abort?.abort(); this.frame?.remove(); this.frame = null; this.frameReady = false; this.requests = []; this.identity = null; this.sentPage = undefined; this.livePortalUrl = undefined;
       this.dialog.close();
     }
-    language() { const language = (document.documentElement.lang || 'en').split('-')[0]; return language === 'no' ? 'nb' : language; }
+    language() { return base(document.documentElement.lang); }
+    /** The chat's language: the one the host's session names (the person's own setting), else the page's. */
+    chatLanguage() { return this.sessionLocale || this.language(); }
     presentation() {
       const root = document.documentElement;
       const preference = root.dataset.theme;
@@ -111,13 +115,17 @@
       if (this.inlineMode) this.dialog.setAttribute('aria-label', text[0]);
       this.closeButton.setAttribute('aria-label', text[1]);
       if (this.frame) this.frame.title = text[0];
-      if (this.frame && this.locale !== language) {
-        this.locale = language;
-        const url = new URL(this.frame.src); url.searchParams.set('locale', language); url.searchParams.set('theme', this.theme);
-        this.frameReady = false;
-        this.frame.src = url.href;
-      }
+      this.followLanguage();
       this.sendIdentity();
+    }
+    /** An open chat whose language changed reloads in the new one; its conversation stays. */
+    followLanguage() {
+      const language = this.chatLanguage();
+      if (!this.frame || this.locale === language) return;
+      this.locale = language;
+      const url = new URL(this.frame.src); url.searchParams.set('locale', language); url.searchParams.set('theme', this.theme);
+      this.frameReady = false;
+      this.frame.src = url.href;
     }
     async session() {
       const url = new URL(this.getAttribute('session-url'), location.origin);
@@ -130,9 +138,11 @@
       const target = new URL(session.url);
       if (target.protocol !== 'https:' && !(target.protocol === 'http:' && ['localhost', '127.0.0.1'].includes(target.hostname))) throw new Error('Invalid support endpoint');
       this.identity = session.identity; this.origin = target.origin;
+      this.sessionLocale = typeof session.locale === 'string' && /^[A-Za-z]{2,3}(?:[-_][A-Za-z0-9]{1,8})*$/.test(session.locale) ? base(session.locale) : null;
       // What the shell's Help column reads (all null-safe; the chat works without them).
       this.details = { portal_url: this.livePortalUrl !== undefined ? this.livePortalUrl : (session.portal_url ?? null), updates_url: session.updates_url ?? null, search_url: session.search_url ?? null, topics_url: session.topics_url ?? null, article_url: session.article_url ?? null };
       this.dispatchEvent(new CustomEvent('cbox-support:session', { detail: this.details, bubbles: true, composed: true }));
+      this.followLanguage();
       this.sendIdentity();
       return target;
     }
@@ -163,14 +173,14 @@
       try {
         const target = await this.session();
         if (!this.dialog.open) return false;
-        this.locale = this.language();
+        this.locale = this.chatLanguage();
         target.searchParams.set('locale', this.locale); target.searchParams.set('theme', this.theme);
         target.searchParams.set('embedded', '1');
         // Inline, the chat page wears the shell's own surfaces, field and send button.
         // `inline="sheet"` is a phone's bottom sheet; anything else is a column beside the page.
         if (this.inlineMode) target.searchParams.set('inline', this.getAttribute('inline') === 'sheet' ? 'sheet' : 'column');
         this.frame = document.createElement('iframe');
-        this.frame.title = (labels[this.locale] || labels.en)[0];
+        this.frame.title = (labels[this.language()] || labels.en)[0];
         this.frame.referrerPolicy = 'strict-origin';
         this.frame.src = target.href;
         this.dialog.append(this.frame);
@@ -225,7 +235,7 @@
       if (!this.frame || !this.identity) return;
       const page = this.page();
       this.sentPage = JSON.stringify(page);
-      this.frame.contentWindow?.postMessage({ __aiAssistant: 'identity', jwt: this.identity, theme: this.theme, locale: this.language(), page }, this.origin);
+      this.frame.contentWindow?.postMessage({ __aiAssistant: 'identity', jwt: this.identity, theme: this.theme, locale: this.chatLanguage(), page }, this.origin);
     }
     page() {
       const limits = { route: 200, title: 200, context: 300 };

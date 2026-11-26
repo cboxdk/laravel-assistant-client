@@ -53,8 +53,11 @@ readonly class SupportSession
      * @param  array<string, string>  $context  Service-owned tenant/project/environment references.
      * @param  string|null  $locale  The language the person reads the service in (`da`, `da-DK`).
      *                               Defaults to the application's locale; pass it when the
-     *                               interface language is kept somewhere else.
-     * @return array{url: string, identity: string, expires_at: int, api_url: string, search_url: string, topics_url: string, article_url: string, updates_url: string, portal_url: string|null}
+     *                               interface language is kept somewhere else, such as the
+     *                               person's own language setting. A named language is also
+     *                               returned as `locale`, and the chat starts in it instead of
+     *                               the page's `lang`; the session refresh carries a change.
+     * @return array{url: string, identity: string, expires_at: int, api_url: string, search_url: string, topics_url: string, article_url: string, updates_url: string, portal_url: string|null, locale: string|null}
      */
     public function forUser(string $subject, string $account, string $service, array $context = [], ?string $name = null, ?string $email = null, ?string $locale = null): array
     {
@@ -88,6 +91,8 @@ readonly class SupportSession
             'article_url' => $api.'/help/articles/{id}',
             'updates_url' => $api.'/support/updates',
             'portal_url' => $this->portalUrl(),
+            // Only a language the host named: the chat then starts in it instead of the page's.
+            'locale' => $locale === null ? null : $reader,
         ];
     }
 

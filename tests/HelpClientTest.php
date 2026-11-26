@@ -65,9 +65,14 @@ final class HelpClientTest extends TestCase
         $help = app(HelpClient::class);
 
         app()->setLocale('da');
-        self::assertSame('https://assistant.test/api/v1/help/search?locale=da', $sessions->forUser('person', 'org', 'billing')['search_url']);
-        // A host whose interface language is not the application's locale names it.
-        self::assertSame('https://assistant.test/api/v1/help/topics/{topic}/articles?locale=de-AT', $sessions->forUser('person', 'org', 'billing', locale: 'de-AT')['topics_url']);
+        $session = $sessions->forUser('person', 'org', 'billing');
+        self::assertSame('https://assistant.test/api/v1/help/search?locale=da', $session['search_url']);
+        // Without a named language the chat keeps the page's.
+        self::assertNull($session['locale']);
+        // A host whose interface language is not the application's locale names it, and the chat starts in it.
+        $named = $sessions->forUser('person', 'org', 'billing', locale: 'de-AT');
+        self::assertSame('https://assistant.test/api/v1/help/topics/{topic}/articles?locale=de-AT', $named['topics_url']);
+        self::assertSame('de-AT', $named['locale']);
         $help->topicArticles($this->user(), 'invoices.index');
         $help->helpSearch(new SupportUser('person-1', 'org-1', 'billing', locale: 'sv'), 'refund');
 
