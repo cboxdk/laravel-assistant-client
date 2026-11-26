@@ -1,5 +1,10 @@
 # Changelog
 
+## Unreleased
+
+- The chat starts in the language the host names. `SupportSession::forUser(..., locale: 'da')` now also returns it as `locale`, and `<cbox-support>` uses it for the chat (the frame's `?locale=` and the identity message) instead of the page's `lang`. The session refresh each minute reloads an open chat when the language changes; its conversation stays. The launcher's own labels keep the page's language. A host that names no language gets `locale: null` and nothing changes.
+- Symfony 8.1.12 in the lock file for the 2026-11-25 advisories.
+
 ## 0.2.5 — 2026-11-25
 
 - The guide page (`/ai-assistant/guides/{key}`) answers in the reader's language. Manifest documents with one `path` and different `locale` are versions of one page; before, the page always showed the document of the key in its address, so a Danish answer linked to English text. The reader's language is the browser's `Accept-Language`, in its order. The response carries `Vary: Accept-Language`. Nothing changes for a service whose guides exist in one language.
