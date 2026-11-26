@@ -5,7 +5,7 @@ import vm from 'node:vm';
 
 const source = readFileSync(new URL('../../resources/support.js', import.meta.url), 'utf8');
 
-function mount({ preference, darkClass = false, systemDark = false } = {}) {
+function mount({ preference, darkClass = false, systemDark = false, globals = {} } = {}) {
   class Element {
     dataset = {};
     nodes = new Map();
@@ -34,6 +34,7 @@ function mount({ preference, darkClass = false, systemDark = false } = {}) {
     window: { addEventListener() {}, removeEventListener() {}, matchMedia: () => scheme },
     MutationObserver: class { observe() {} disconnect() {} },
     setInterval: () => 1, clearInterval() {},
+    ...globals,
   });
   const element = new Support();
   element.connectedCallback();
@@ -70,4 +71,37 @@ test('system changes retain an explicit light preference', () => {
   const { element, changeSystem } = mount({ preference: 'light' });
   changeSystem(true);
   assert.equal(element.theme, 'light');
+});
+
+test('the chat follows the language the session names, and a change at refresh reloads it', async () => {
+  let locale = 'da-DK';
+  const { element, root } = mount({ globals: {
+    location: { origin: 'https://product.example' },
+    fetch: async () => ({ ok: true, json: async () => ({ url: 'https://assistant.example/embed/w', identity: 'jwt', locale }) }),
+    AbortController: class { signal = {}; abort() {} },
+    CustomEvent: class { constructor(name, init) { this.type = name; this.detail = init?.detail; } },
+  } });
+  root.lang = 'en';
+  const messages = [];
+  element.getAttribute = () => '/help/session';
+  element.dispatchEvent = () => true;
+  await element.session();
+  // The page stays English; the chat speaks the person's own language.
+  assert.equal(element.language(), 'en');
+  assert.equal(element.chatLanguage(), 'da');
+  element.locale = 'da';
+  element.frame = { src: 'https://assistant.example/embed/w?locale=da', contentWindow: { postMessage: (...args) => messages.push(args) } };
+  element.sendIdentity();
+  assert.equal(messages.at(-1)[0].locale, 'da');
+
+  // The person changes their language: the next refresh reloads the chat in it.
+  locale = 'en';
+  await element.session();
+  assert.equal(new URL(element.frame.src).searchParams.get('locale'), 'en');
+
+  // Without a named language the chat follows the page again.
+  locale = null;
+  root.lang = 'sv';
+  await element.session();
+  assert.equal(new URL(element.frame.src).searchParams.get('locale'), 'sv');
 });
