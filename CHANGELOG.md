@@ -1,6 +1,6 @@
 # Changelog
 
-## Unreleased
+## 0.2.6 — 2026-11-26
 
 - The chat starts in the language the host names. `SupportSession::forUser(..., locale: 'da')` now also returns it as `locale`, and `<cbox-support>` uses it for the chat (the frame's `?locale=` and the identity message) instead of the page's `lang`. The session refresh each minute reloads an open chat when the language changes; its conversation stays. The launcher's own labels keep the page's language. A host that names no language gets `locale: null` and nothing changes.
 - Symfony 8.1.12 in the lock file for the 2026-11-25 advisories.
